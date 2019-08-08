@@ -19,11 +19,10 @@ The goals / steps of this project are the following:
 
 [image0]: ./camera_cal/calibration1.jpg "Distorted Image"
 [image1]: ./output_images/undistorted/calibration1.jpg "Undistorted Image"
-[image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
+[image2]: ./test_images/1.1.jpg "Distored Test Image"
+[image3]: ./output_images/undistorted/1.1.jpg "Undistorted Test Image"
+[image4]: ./output_images/thresholded/scaled_1.1.jpg "Thresholded Test Image"
+
 [video1]: ./project_video.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/1966/view) Points
@@ -67,15 +66,13 @@ Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that
 Then, for each image (converted to grayscale) in the "camera_cal" folder I call `cv2.findChessboardCorners(gray, (9,6),None)`.
 This function returns the chessboard corners locations in the image space, if they are found.
 
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  
+I then used the output `objpoints` and `imgpoints` to compute the camera calibration matrix `mtx` and distortion coefficients `dst` using the `cv2.calibrateCamera()` function.  
 
-I applied this distortion correction to the test image using the `cv2.undistort()` function on this image: 
+I applied this distortion correction to the test image using the `cv2.undistort()` function: 
 
-![alt text][image0] 
-
-and got this result:
-
-![alt text][image1]
+Distorted Image            |  Undistorted Image
+:-------------------------:|:-------------------------:
+![alt text][image0] | ![alt text][image1]
 
 It can be seen that the camera calibration is successful as the output image looks correct.
 
@@ -83,18 +80,51 @@ It can be seen that the camera calibration is successful as the output image loo
 
 #### 1. Provide an example of a distortion-corrected image.
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
+After the calibration matrix `mtx` and distortion coefficients `dst` were determined in the previous step, distortion correction was applied to one of the sample images to test it.
+
+The complete code for this step can be found in the [third code cell](AdvancedLaneLineDetection.ipynb#DistCorrTest)  of the notebook.
+
+The effect of this correction is subtle, but still noticeable if you pay attention to the hood of the vehicle 
+Distorted Image            |  Undistorted Image
+:-------------------------:|:-------------------------:
+![alt text][image2] | ![alt text][image3]
+
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+I used a combination of color and sobel thresholds to generate a binary image.  
+The `thresholding()` function is part of the [fourth code cell](AdvancedLaneLineDetection.ipynb#Thresh).
 
-![alt text][image3]
+The steps that are taken in the function are:
+
+* Copy Input image.
+* Convert image from BGR to Grayscale.
+* Take sobel derivative in x-direction and scale it to 8-bits.
+* Create a mask using the `sx_thresh`.
+* Convert image from BGR to HSV color space and extract h and v channels.
+* Take an average of the v-channel in the following window [450:600,500:800]. This will approximate the lighting and/or pavement color.
+* Depending on the average, adjust the l-channel threshold, v-channel threshold, and whether or not to use sobel.
+* Create an h and v channel masks, which in combination will help isolate the yellow lanes from the image.
+* Convert image from BGR to HLS color space and extract l channel.
+* Create an l-channel mask.
+* Create a final binary image by combining masks in the following way:
+``` python
+combined_binary[((sxbinary == 1) & (use_sobel == 1)) | (l_binary == 1) | ((h_binary == 1) & (v_binary == 1))] = 1
+```
+
+I found that you can get better lane extraction by varying the threshold levels of the l and v channels according to the conditions.
+
+Here's an example of my output for this step.
+
+Undistorted Image          |  Thresholded Image
+:-------------------------:|:-------------------------:
+![alt text][image3] | ![alt text][image4]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+The code for my perspective transform includes a function called `warper()`.  
+The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  
+I chose the hardcode the source and destination points in the following manner:
 
 ```python
 src = np.float32(
