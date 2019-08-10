@@ -123,7 +123,7 @@ Undistorted Image          |  Thresholded Image
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes two functions `warpimg` and `unwarpimg`, found in the [fifth code cell](AdvancedLaneLineDetection.ipynb#Warp) of the IPython notebook AdvancedLaneLineDetection.
+The code for my perspective transform includes two functions `warpimg()` and `unwarpimg()`, found in the [fifth code cell](AdvancedLaneLineDetection.ipynb#Warp) of the IPython notebook AdvancedLaneLineDetection.
 
 ``` python
 def warpimg(img, M):
@@ -234,7 +234,7 @@ It uses numpy's polyfit function to get the fit coefficients. Those coefficients
 ![alt text][image6]
 
 
-The second approach to finding lane lanes, and the one that can be seen on the right part of the image above, uses a window to find the lane line pixels. The code for this can be found in the function `find_lane_pixels_window`.
+The second approach to finding lane lanes, and the one that can be seen on the right part of the image above, uses a window to find the lane line pixels. The code for this can be found in the function `find_lane_pixels_window()`.
 
 This function relies on the best fit found previously using the sliding box fit method. It will not work on it's own.
 However, it is a good way to find the polynomial fit in frames following the one where the fit was found using the boxes.
@@ -244,9 +244,9 @@ This method is called the window approach because it works by searching for pixe
 left_lane_inds = np.nonzero(np.abs(left_fitx - nonzerox) < margin)[0]
 right_lane_inds = np.nonzero(np.abs(right_fitx - nonzerox) < margin)[0]
 ```
-Once the lane line pixels are identified, the next fit is calcualted using the same `fit_poly` function.
+Once the lane line pixels are identified, the next fit is calcualted using the same `fit_poly()` function.
 
-The above calculations to find the polynomial fit were done in terms of pixels. However, to calculate the radius of the curvature of the lane, a fit in engineering units such as meters is needed. That's why there is a separate function `fit_poly_real`, which calculates the polynomial coefficients with the following pixel to meter coefficient in mind:
+The above calculations to find the polynomial fit were done in terms of pixels. However, to calculate the radius of the curvature of the lane, a fit in engineering units such as meters is needed. That's why there is a separate function `fit_poly_real()`, which calculates the polynomial coefficients with the following pixel to meter coefficient in mind:
 
 ``` python
 ym_per_pix = 3.048/95 # meters per pixel in y dimension
@@ -277,7 +277,7 @@ center_offset = (car_position - lane_center_position)
 The drawing function `draw_lane_bounds()` is located in the [eighth code cell](AdvancedLaneLineDetection.ipynb#DrawLane) of the notebook.
 
 It uses the lane polynomial fit information to generate the x-axis coordinates of the lane lines for each y-axis coordinate.
-Then, it recasts those coordinates numpy array manipulation and then draws a polygon in the warped perspective using the coordinates and OpenCV's `fillPoly()` function.
+Then, it recasts those coordinates using numpy array manipulation and then draws a polygon in the warped perspective using the coordinates and OpenCV's `fillPoly()` function.
 
 ``` python
 cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
@@ -290,7 +290,7 @@ newwarp = cv2.warpPerspective(color_warp, Minv, (width, height))
 result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
 ```
 
-The polygon image is then combined with undistorted image for the final output.
+The polygon's image is then combined with undistorted image for the final output.
 
 Information about lane curvature radius and vehicle's center offset from the middle of the lane is also drawn on the final image using `draw_data()` function found in the [ninth code cell](AdvancedLaneLineDetection.ipynb#DrawData) of the notebook. It uses OpenCV's `putText()` function.
 
@@ -330,7 +330,7 @@ if len(self.current_fit) > 0:
 
 The same averaging is done on the curvature radius.
 
-The final output fram is generated using each lane line's best fits.
+The final output frame is generated using each lane line's best fits.
 
 Here's a [link to my video result](./output_videos/project_video.mp4) that shows the complete video processing pipeline output.
 
@@ -340,9 +340,14 @@ Here's a [link to my video result](./output_videos/project_video.mp4) that shows
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
+The biggest amount of time spent on this project was on the thresholding function. It worked well on the main project video, but wasn't giving good results on the challenging videos. The main reason for that is the variability in road surface color and especially the lighting conditions, such as under the bridge in the challenge video. I've eventually added some logic to adjust the parameters on the fly, based on a sample of the frame to try to make the pipeline more robust. It's still not perfect, as you can see it struggle in the [challenge video result](./output_videos/challenge_video.mp4) 
 
+The problem is you want the function to be sensitive enough to pick up enough pixels to detect lane lines in most frames, but that also causes it to be too sensitive and pick up unrelated pixels that confuse the lane line calculation function.
 
-Here's a [link to my challenge video result](./output_videos/challenge_video.mp4)
+The pipeline struggles even more with the harder challenge video, expectedly so. There are sharp turns, high variability in lighting conditions and even frames where no human could detect lane lines because of sun shining straight into the camera's lens and making everything in the frame bright. Here's [link to my harder challenge video result](./output_videos/harder_challenge_video.mp4), if that is of interest.
 
-My pipeline didn't work well with the harder challenge video and I'll mention why in the discussion section.
-Here's [link to my harder challenge video result](./output_videos/harder_challenge_video.mp4), if that is of interest.
+The improvements that I think could be made to make it more robust are:
+* More parameter tuning
+* More dynmaic parameter changes according to the lighting conditions
+* Additional sanity checks
+* Investigation of other color spaces
